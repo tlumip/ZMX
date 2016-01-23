@@ -12,33 +12,38 @@
 #writeZipMat(Matrix, "sovDistAm.zmx")
 
 #Read ZMX File
-readZipMat = function(FileName) {
+readZipMat = function(fileName) {
   
-  #Read matrix attributes
-  NumRows = as.integer(scan(unz( FileName, "_rows"), what="", quiet=T ) )
-  NumCols = as.integer(scan(unz( FileName, "_columns" ), what="", quiet=T ) )
-  RowNames = strsplit(scan(unz( FileName, "_external row numbers" ), what="", quiet=T ),"," )[[1]]
-  ColNames = strsplit(scan(unz( FileName, "_external column numbers" ), what="", quiet=T ),"," )[[1]]
-  options(warn=-1)
-  closeAllConnections()
-  options(warn=0)
+  #define matrix
+  rowCon = unz(fileName,"_rows")
+  colCon = unz(fileName,"_columns")
+  xRowNumCon = unz(fileName,"_external row numbers")
+  xColNumCon = unz(fileName,"_external column numbers")
+  nrows = as.integer(scan(rowCon, what="", quiet=T))
+  ncols = as.integer(scan(colCon, what="", quiet=T))
+  rowNames = strsplit(scan(xRowNumCon, what="", quiet=T),",")[[1]]
+  colNames = strsplit(scan(xColNumCon, what="", quiet=T),",")[[1]]
+  close(rowCon)
+  close(colCon)
+  close(xRowNumCon)
+  close(xColNumCon)
   
-  #Initialize matrix to hold values
-  Result.ZnZn = matrix( 0, NumRows, NumCols )
-  rownames( Result.ZnZn ) = RowNames
-  colnames( Result.ZnZn ) = ColNames
+  #create matrix
+  outMat = matrix(0, nrows, ncols)
+  rownames(outMat) = rowNames
+  colnames(outMat) = colNames
   
-  #Read matrix data by row and place in initialized matrix
-  RowDataEntries. = paste("row_", 1:NumRows, sep="")
-  for(i in 1:NumRows) {
-    Result.ZnZn[ i, ] = readBin( gzcon(unz( FileName, RowDataEntries.[i] )),
-      what=double(), n=NumCols, size=4, endian="big" )
-    closeAllConnections()
+  #read records
+  zipEntries = paste("row_", 1:nrows, sep="")
+  for(i in 1:nrows) {
+    con = unz(fileName,zipEntries[i],"rb")
+    outMat[i,] = readBin(con,what=double(),n=ncols, size=4, endian="big")
+    close(con)
   }
-  
-  #Return the matrix
-  Result.ZnZn
+  #return matrix
+  return(outMat)
 }
+
 
 #Write ZMX File
 writeZipMat = function(Matrix, FileName, SevenZipExe="C:/Program Files/7-Zip/7z.exe") {
